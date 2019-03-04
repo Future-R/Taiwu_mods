@@ -27,6 +27,10 @@ namespace LongDaoMaid
         public string getNewName = "";
         public bool ssr = true;
         public int ssrBoom = 1;
+        public int liChang = 2;
+        public bool xingGeChange = true;
+        public int xingGe = 0;
+
 
         public override void Save(UnityModManager.ModEntry modEntry)
         {
@@ -48,6 +52,7 @@ namespace LongDaoMaid
 
             settings = UnityModManager.ModSettings.Load<Settings>(modEntry);
 
+            Logger = modEntry.Logger;
             modEntry.OnToggle = OnToggle;
             modEntry.OnGUI = OnGUI;
             modEntry.OnSaveGUI = OnSaveGUI;
@@ -59,6 +64,7 @@ namespace LongDaoMaid
         {
             if (!value) return false;
             enabled = value;
+            Logger.Log("龙岛女仆已上线");
             return true;
         }
 
@@ -76,12 +82,7 @@ namespace LongDaoMaid
             GUILayout.Label("<color=#FF6EB4>【品如衣服】</color>：女仆初始拥有一件下品服装.");
             GUILayout.Label("<color=#FF6EB4>【略通六艺】</color>：女仆资质比常人略高一线.");
             //GUILayout.Label("<color=#FF6EB4>【】</color>：你不接受石芯玉女.");//想不到起什么名，不显示了！
-            //后续待增加功能：暂无
-
-            GUILayout.BeginHorizontal("Box");
-            settings.stanceChange = GUILayout.Toggle(settings.stanceChange, "<color=#FF6EB4>【革命战友】</color> ");
-            GUILayout.Label("效果：处世立场与玩家获得女仆时的立场相同.");
-            GUILayout.EndHorizontal();
+            //后续待增加功能：调整立场、再提升资质、加魅力、提高春宵率
 
             GUILayout.BeginHorizontal("Box");
             settings.add1s = GUILayout.Toggle(settings.add1s, "<color=#FF6EB4>【再续十年】</color> ");
@@ -105,20 +106,6 @@ namespace LongDaoMaid
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal("Box");
-            GUILayout.Label("　 <color=#FF6EB4>【女装山脉】</color> ：你有时想要些不一样的<color=#FF6EB4>女仆</color>.");
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal("Box");
-            settings.nvZhuang = GUILayout.SelectionGrid(settings.nvZhuang, new string[]
-            {
-                "<color=#FF6EB4>正常女仆</color>",
-                "<color=#FF6EB4>女生男相</color>",
-                "<color=#3987D6>男生女相</color>",
-                "<color=#3987D6>正常男仆</color>",
-            }, 4, new GUILayoutOption[0]);
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal("Box");
             GUILayout.Label("<color=#FF6EB4>　 【挑老拣少】</color>：你与伏龙坛主商议，只挑走", GUILayout.Width(270));
             int.TryParse(GUILayout.TextField(settings.minAge.ToString(), 3, GUILayout.Width(30)), out settings.minAge);
             GUILayout.Label("~", GUILayout.Width(10));
@@ -134,7 +121,108 @@ namespace LongDaoMaid
             GUILayout.Label("　　　（赐姓赐名皆可选填）");
             GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal("Box");
+            settings.stanceChange = GUILayout.Toggle(settings.stanceChange, "<color=#FF6EB4>【朋党之说】</color> ：玩家只招募对应立场的女仆.");
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal("Box");
+            settings.liChang = GUILayout.SelectionGrid(settings.liChang, new string[]
+            {
+                "<color=#EFF284>刚正</color>",
+                "<color=#3987D6>仁善</color>",
+                "中庸",
+                "<color=#B688DA>叛逆</color>",
+                "<color=#FF0000>唯我</color>"
+            }, 5, new GUILayoutOption[0]);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal("Box");
+            settings.xingGeChange = GUILayout.Toggle(settings.xingGeChange, "<color=#FF6EB4>【入职培训】</color> ：玩家将对招募来的女仆进行初级调教.");
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal("Box");
+            settings.xingGe = GUILayout.SelectionGrid(settings.xingGe, new string[]
+            {
+                "随机性格",
+                "<color=#3987D6>知书达理</color>",
+                "<color=#FF0000>毒舌傲娇</color>",
+
+            }, 3, new GUILayoutOption[0]);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal("Box");
+            GUILayout.Label("　 <color=#FF6EB4>【女装山脉】</color> ：你有时想要些不一样的<color=#FF6EB4>女仆</color>.");
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal("Box");
+            settings.nvZhuang = GUILayout.SelectionGrid(settings.nvZhuang, new string[]
+            {
+                "<color=#FF6EB4>正常女仆</color>",
+                "<color=#FF6EB4>女生男相</color>",
+                "<color=#3987D6>男生女相</color>",
+                "<color=#3987D6>正常男仆</color>",
+            }, 4, new GUILayoutOption[0]);
+            GUILayout.EndHorizontal();
+
+            GUILayout.Label("<color=#FF0000>注意</color>：请在1.0.4及过去版本使用过赐姓功能的存档中点击1次下面的按钮，修复将来赐姓女仆生子时产生的BUG！");
+
+            //检测存档
+            DateFile tbl = DateFile.instance;
+            if (tbl == null || tbl.actorsDate == null || !tbl.actorsDate.ContainsKey(tbl.mianActorId))
+            {
+                GUILayout.Label("  存档未载入!");
+            }
+            else
+            {
+                if (GUILayout.Button("重置隐藏姓氏"))
+                {
+                    resetTrueSurName();
+                }
+            }
+
             GUILayout.EndVertical();
+        }
+
+        /// <summary>
+        /// 检测所有非太吾的角色第29项(真实姓氏)，如果是string，改为int的5
+        /// </summary>
+        public static void resetTrueSurName()
+        {
+            Logger.Log("开始重置真实姓氏");
+            foreach (KeyValuePair<int, Dictionary<int, string>> e in DateFile.instance.actorsDate)
+            {
+                if (e.Value.ContainsKey(29))
+                {
+                    if (!IsNumber(e.Value[29]))
+                    {
+                        Logger.Log($"{DateFile.instance.actorsDate[e.Key][5]}{DateFile.instance.actorsDate[e.Key][0]}已重置真实姓氏");
+                        DateFile.instance.actorsDate[e.Key][29] = "5";
+                    }
+                }
+            }
+            Logger.Log("重置完毕！");
+        }
+
+        /// <summary>
+        /// 判断字符串是否为纯数字
+        /// </summary>
+        /// <param name="str"></param>
+        /// <returns></returns>
+        public static bool IsNumber(string str)
+        {
+            if (str == null || str.Length == 0)
+                return false;
+            ASCIIEncoding ascii = new ASCIIEncoding();
+            byte[] bytestr = ascii.GetBytes(str);
+
+            foreach (byte c in bytestr)
+            {
+                    if (c < 48 || c > 57)
+                    {
+                        return false;
+                    }
+            }
+            return true;
         }
 
         /// <summary>
@@ -193,13 +281,8 @@ namespace LongDaoMaid
                 {
                     flag = true;
                 }
-
-                if (npcFeature[i] == 1002 | npcFeature[i] == 1001)//石芯玉女 无根之人
-                {
-                    DateFile.instance.RemoveActorFeature(id,i);
-                }
             }
-            return flag;
+                return flag;
         }
 
         /// <summary>
@@ -230,9 +313,27 @@ namespace LongDaoMaid
                 else npc[17] = "0";
             }
 
-            //1.龙岛女仆的处世立场与玩家获得女仆时的立场相同
+            //遍历所有特性，找到并消除特性
+            List<int> npcFeature = DateFile.instance.GetActorFeature(id);
+            for (int i = 0; i < npcFeature.Count; i++)
+            {
+                if (npcFeature[i] == 1002 | npcFeature[i] == 1001)//石芯玉女 无根之人
+                {
+                    DateFile.instance.RemoveActorFeature(id, i);
+                }
+
+                if (settings.xingGeChange && settings.xingGe >= 43  && settings.xingGe <= 48)//入职培训
+                {
+                    DateFile.instance.RemoveActorFeature(id, i);
+                }
+            }
+
+            //Logger.Log($"5项：{npc[5]}");
+            Logger.Log($"29项：{player[29]}");
+
+            //1.调整立场
             if (settings.stanceChange == true)
-                npc[16] = player[16]; //修改立场
+                npc[16] = Convert.ToString(settings.liChang * 250); //修改立场
 
             //2.每个龙岛女仆都被龙神赋予更多的阳寿。因为自动调整过年龄，所以增加10年补贴可能的亏损。
             int countTemp13 = Convert.ToInt32(npc[13]);
@@ -273,12 +374,19 @@ namespace LongDaoMaid
             //6.再生父母
             if (settings.getNewSurname != "")
             {
-                npc[29] = settings.getNewSurname;
                 npc[5] = settings.getNewSurname;
             }
 
             if (settings.getNewName != "")
                 npc[0] = settings.getNewName;
+
+            //7.正式培训
+            if (settings.xingGeChange)
+            {
+                int tempXingGe = settings.xingGe;
+                if (settings.xingGe == 0) { tempXingGe = Random.Range(1, 2); }
+                DateFile.instance.AddActorFeature(id, 42 + Random.Range(1 * tempXingGe, 3 * tempXingGe));
+            }
 
             //慧眼识珠
             //0|鼻子|特征|眼睛|眉毛|嘴|胡子|头发
@@ -333,19 +441,22 @@ namespace LongDaoMaid
 
             //略微强化资质
             if (int.Parse(npc[yiID]) <= 100)
-                npc[yiID] = Convert.ToString(Convert.ToInt32(npc[yiID]) + 10);
+                npc[yiID] = Convert.ToString(Convert.ToInt32(npc[yiID]) + 20);
             if (int.Parse(npc[wuID]) <= 100)
-                npc[wuID] = Convert.ToString(Convert.ToInt32(npc[wuID]) + 10);
+                npc[wuID] = Convert.ToString(Convert.ToInt32(npc[wuID]) + 20);
             if (int.Parse(npc[601]) <= 100)
-                npc[601] = Convert.ToString(Convert.ToInt32(npc[601]) + 10);
+                npc[601] = Convert.ToString(Convert.ToInt32(npc[601]) + 15);
             if (int.Parse(npc[602]) <= 100)
-                npc[601] = Convert.ToString(Convert.ToInt32(npc[601]) + 10);
+                npc[602] = Convert.ToString(Convert.ToInt32(npc[601]) + 15);
             if (int.Parse(npc[603]) <= 100)
-                npc[601] = Convert.ToString(Convert.ToInt32(npc[601]) + 10);
+                npc[603] = Convert.ToString(Convert.ToInt32(npc[601]) + 15);
 
-            int rdyiID = Random.Range(501, 516);
-            if (int.Parse(npc[rdyiID]) <= 100)
-                npc[rdyiID] = Convert.ToString(Convert.ToInt32(npc[rdyiID]) + 10);
+            for (int x=1; x <= 6; x++)
+            {
+                int rdyiID = Random.Range(501, 516);
+                if (int.Parse(npc[rdyiID]) <= 100)
+                    npc[rdyiID] = Convert.ToString(Convert.ToInt32(npc[rdyiID]) + 20);
+            }
 
             //SSR
             if (settings.ssr && Random.Range(1, 100) <= settings.ssrBoom)
@@ -354,8 +465,6 @@ namespace LongDaoMaid
                 if (npc[14] == "2") DateFile.instance.AddActorFeature(id, 1002);
                 else DateFile.instance.AddActorFeature(id, 1001);
             }
-
-            
 
             //给衣服
             //73601——73703 73801——73809

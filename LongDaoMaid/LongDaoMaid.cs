@@ -328,9 +328,6 @@ namespace LongDaoMaid
                 }
             }
 
-            //Logger.Log($"5项：{npc[5]}");
-            Logger.Log($"29项：{player[29]}");
-
             //1.调整立场
             if (settings.stanceChange == true)
                 npc[16] = Convert.ToString(settings.liChang * 250); //修改立场
